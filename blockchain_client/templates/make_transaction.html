@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Record Lending - Library Ledger</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/static/css/custom.css">
+  <script src="/static/vendor/jquery/jquery.min.js"></script>
+  <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="#">Library Ledger</a>
+    <div class="collapse navbar-collapse">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item"><a class="nav-link" href="/">Wallet Generator</a></li>
+        <li class="nav-item active"><a class="nav-link" href="/make/transaction">Record Lending</a></li>
+        <li class="nav-item"><a class="nav-link" href="/view/transactions">View Ledger</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container" style="margin-top:80px;">
+  <h3>Record Lending Transaction</h3>
+
+  <div class="card card-body">
+    <form id="lending_form">
+      <div class="form-group">
+        <label for="student_id">Student ID</label>
+        <input id="student_id" name="student_id" class="form-control" placeholder="e.g. S1001" required>
+      </div>
+
+      <div class="form-group">
+        <label for="book_id">Book ID</label>
+        <input id="book_id" name="book_id" class="form-control" placeholder="e.g. B-9780140449136" required>
+      </div>
+
+      <div class="form-group">
+        <label for="action">Action</label>
+        <select id="action" name="action" class="form-control" required>
+          <option value="borrow">Borrow</option>
+          <option value="return">Return</option>
+        </select>
+      </div>
+
+      <hr>
+
+      <div class="form-group">
+        <label for="sender_public_key">Optional: Public Key (signer)</label>
+        <input id="sender_public_key" name="sender_public_key" class="form-control" placeholder="paste public key if signing">
+      </div>
+
+      <div class="form-group">
+        <label for="sender_private_key">Optional: Private Key (signer)</label>
+        <input id="sender_private_key" name="sender_private_key" class="form-control" placeholder="paste private key to sign transaction">
+      </div>
+
+      <div class="text-center">
+        <button id="generate_transaction" class="btn btn-primary btn-lg" type="submit">Generate Transaction</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" role="dialog" aria-labelledby="confirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><strong>Confirm Transaction</strong></h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Student ID:</strong> <span id="c_student"></span></p>
+        <p><strong>Book ID:</strong> <span id="c_book"></span></p>
+        <p><strong>Action:</strong> <span id="c_action"></span></p>
+        <p><strong>Timestamp:</strong> <span id="c_timestamp"></span></p>
+        <p><strong>Signature:</strong> <span id="c_signature"></span></p>
+        <input type="hidden" id="node_url" value="http://127.0.0.1:5001">
+      </div>
+      <div class="modal-footer">
+        <button id="confirm_btn" type="button" class="btn btn-success">Confirm & Submit</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" role="dialog" aria-labelledby="successModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><strong>Transaction Success</strong></h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>The transaction has been submitted successfully.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+$(function(){
+  $('#generate_transaction').on('click', function(e){
+    e.preventDefault();
+    $.ajax({
+      url: '/generate/transaction',
+      method: 'POST',
+      data: $('#lending_form').serialize(),
+      success: function(resp){
+        if (!resp || !resp.transaction) {
+          alert('Invalid response from generator');
+          return;
+        }
+        let tx = resp.transaction;
+        $('#c_student').text(tx.student_id || $('#student_id').val() || '');
+        $('#c_book').text(tx.book_id || $('#book_id').val() || '');
+        $('#c_action').text((tx.action || $('#action').val() || '').toString().toLowerCase());
+        $('#c_timestamp').text(new Date((tx.timestamp || (Date.now()/1000)) * 1000).toISOString());
+        $('#c_signature').text(resp.signature || '');
+        $('#confirmModal').modal('show');
+      },
+      error: function(xhr){
+        alert('Failed to generate transaction: ' + (xhr.responseJSON ? JSON.stringify(xhr.responseJSON) : xhr.responseText));
+      }
+    });
+  });
+
+  $('#confirm_btn').on('click', function(){
+    let student = $('#c_student').text().trim();
+    let book = $('#c_book').text().trim();
+    let action = $('#c_action').text().trim();
+    let signature = $('#c_signature').text().trim();
+    let public_key = $('#sender_public_key').val().trim();
+    let nodeUrl = $('#node_url').val().trim() || 'http://127.0.0.1:5001';
+
+    let librarian_pub = public_key || 'The Blockchain';
+    let transaction_signature = signature || '';
+
+    $.post(nodeUrl + '/transactions/new', {
+      librarian_public_key: librarian_pub,
+      student_id: student,
+      book_id: book,
+      action: action,
+      transaction_signature: transaction_signature
+    })
+    .done(function(resp){
+      $('#confirmModal').modal('hide');
+      $('#successModal').modal('show');
+      $('#lending_form')[0].reset();
+    })
+    .fail(function(xhr){
+      alert('Failed to submit to node: ' + (xhr.responseJSON ? JSON.stringify(xhr.responseJSON) : xhr.responseText));
+    });
+  });
+
+});
+</script>
+
+</body>
+</html>
