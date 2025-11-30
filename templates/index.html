@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Library Ledger - Blockchain </title>
+
+    <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/vendor/DataTables/css/datatables.min.css">
+    <link rel="stylesheet" href="/static/vendor/font-awesome/font-awesome.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+
+    <style>
+        body { padding-top: 80px; }
+        .form-inline .form-control { width: auto; display: inline-block; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container">
+        <a href="#" class="navbar-brand">Library Ledger (Blockchain)</a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item active"><a href="/" class="nav-link">Home</a></li>
+                <li class="nav-item"><a href="/configure" class="nav-link">Configure</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <h4>Book Event Record (Borrow / Return)</h4>
+    <p>Fill the fields below and click <strong>Record Event</strong>. Librarian must sign the transaction.</p>
+
+    <form id="transaction_form" class="form-inline">
+        <div class="row">
+            <div class="col-sm-6">
+                <input type="text" name="librarian_public_key" id="librarian_public_key" placeholder="Librarian Public Key" class="form-control w-100 mb-3">
+                <input type="text" name="student_id" id="student_id" placeholder="Student ID" class="form-control w-100 mb-3">
+            </div>
+            <div class="col-sm-6">
+                <input type="text" name="book_id" id="book_id" placeholder="Book ID (ISBN / internal id)" class="form-control w-100 mb-3">
+                <select name="action" id="action" class="form-control w-100 mb-3">
+                    <option value="borrow">Borrow</option>
+                    <option value="return">Return</option>
+                </select>
+                <input type="text" name="transaction_signature" id="transaction_signature" placeholder="Transaction Signature" class="form-control w-100 mb-3">
+            </div>
+        </div>
+
+        <div class="text-center mb-4">
+            <input type="button" id="submit_transaction_button" class="btn btn-primary btn-lg" value="Record Event">
+        </div>
+    </form>
+</div>
+
+<hr>
+
+<div class="container text-center mb-3">
+    <h4>Pending Events</h4>
+    <button type="button" id="refresh_transactions" class="btn btn-primary"><i class="fa fa-refresh"></i></button>
+</div>
+
+<div class="container">
+    <table id="unmined_transactions_table" class="table table-bordered"></table>
+    <div class="text-center mt-3 mb-5">
+        <input type="button" id="mine_button" class="btn btn-success purple-btn btn-lg" value="Mine">
+    </div>
+</div>
+
+<div class="container text-center mb-3">
+    <h4>Ledger Events</h4>
+    <button type="button" id="refresh_blockchain" class="btn btn-primary"><i class="fa fa-refresh"></i></button>
+</div>
+
+<div class="container">
+    <table id="transactions_table" class="table table-bordered"></table>
+</div>
+
+<script src="/static/vendor/jquery/jquery.min.js"></script>
+<script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/static/vendor/DataTables/js/datatables.min.js"></script>
+<script src="/static/vendor/DataTables/js/ellipsis.js"></script>
+
+<script>
+$(function() {
+    function reloadChainTable() {
+        $.ajax({
+            url: "/chain",
+            type: "GET",
+            success: function(response) {
+                let transactions = [];
+                let count = 1;
+                for (let i=0; i < response['length']; i++) {
+                    for (let j=0; j < response['chain'][i]['transactions'].length; j++) {
+                        let tx = response['chain'][i]['transactions'][j];
+                        let options = { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" };
+                        let date = new Date(response["chain"][i]["timestamp"] * 1000);
+                        let formattedTimestamp = date.toLocaleTimeString('en-US', options);
+
+                        // Skip empty mining reward transactions if any
+                        let librarian = tx['librarian_public_key'] || '';
+                        let student = tx['student_id'] || '';
+                        let book = tx['book_id'] || '';
+                        let action = tx['action'] || '';
+
+                        let transaction = [
+                            count,
+                            librarian,
+                            student,
+                            book,
+                            action,
+                            formattedTimestamp,
+                            response['chain'][i]['block_number']
+                        ];
+                        transactions.push(transaction);
+                        count += 1;
+                    }
+                }
+                $('#transactions_table').DataTable({
+                    destroy: true,
+                    data: transactions,
+                    columns: [
+                        {title: "#"},
+                        {title: "Librarian Public Key"},
+                        {title: "Student ID"},
+                        {title: "Book ID"},
+                        {title: "Action"},
+                        {title: "Timestamp"},
+                        {title: "Block#"}
+                    ],
+                    columnDefs: [{targets: [1,2,3,4,5,6], render: $.fn.dataTable.render.ellipsis(25)}]
+                });
+            }
+        });
+    }
+
+    function reloadPendingTable() {
+        $.ajax({
+            url: "/transactions/get",
+            type: "GET",
+            success: function(response) {
+                let transactions = [];
+                let count = 1;
+                for (let i=0; i<response['transactions'].length; i++) {
+                    let tx = response['transactions'][i];
+                    let row = [
+                        count,
+                        tx['librarian_public_key'],
+                        tx['student_id'],
+                        tx['book_id'],
+                        tx['action']
+                    ];
+                    transactions.push(row);
+                    count += 1;
+                }
+                $('#unmined_transactions_table').DataTable({
+                    destroy:true,
+                    data: transactions,
+                    columns: [
+                        {title: "#"},
+                        {title: "Librarian Public Key"},
+                        {title: "Student ID"},
+                        {title: "Book ID"},
+                        {title: "Action"}
+                    ],
+                    columnDefs: [{targets: [1,2,3,4], render: $.fn.dataTable.render.ellipsis(25)}]
+                });
+            }
+        });
+    }
+
+    reloadChainTable();
+    reloadPendingTable();
+
+    $('#submit_transaction_button').click(function() {
+        let data = {
+            librarian_public_key: $('#librarian_public_key').val(),
+            student_id: $('#student_id').val(),
+            book_id: $('#book_id').val(),
+            action: $('#action').val(),
+            transaction_signature: $('#transaction_signature').val()
+        };
+        if(!data.librarian_public_key || !data.student_id || !data.book_id || !data.transaction_signature){
+            alert("Please fill all fields including the signature!");
+            return;
+        }
+        $.ajax({
+            url: '/transactions/new',
+            type: 'POST',
+            dataType: 'json',
+            data: data,
+            success: function(response) {
+                alert(response['message']);
+                $('#librarian_public_key').val('');
+                $('#student_id').val('');
+                $('#book_id').val('');
+                $('#transaction_signature').val('');
+                reloadPendingTable();
+            },
+            error: function(xhr) {
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    alert(xhr.responseJSON.message);
+                } else {
+                    alert('Error recording event. See console for details.');
+                }
+                console.log(xhr);
+            }
+        });
+    });
+
+    $('#mine_button').click(function() {
+        $.ajax({
+            url: '/mine',
+            type: 'GET',
+            success: function(response) {
+                alert(response['message']);
+                reloadChainTable();
+                reloadPendingTable();
+            }
+        });
+    });
+
+    $('#refresh_transactions').click(function() {
+        reloadPendingTable();
+    });
+
+    $('#refresh_blockchain').click(function() {
+        $.ajax({
+            url: '/nodes/resolve',
+            type: 'GET',
+            success: function(response) {
+                reloadChainTable();
+                reloadPendingTable();
+            }
+        });
+    });
+});
+</script>
+</body>
+</html>

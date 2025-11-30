@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Blockchain Frontend - Configure Nodes</title>
+
+    <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/vendor/DataTables/css/datatables.min.css">
+    <link rel="stylesheet" href="/static/vendor/font-awesome/font-awesome.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container">
+        <a href="#" class="navbar-brand">Blockchain</a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item"><a href="/" class="nav-link">Home</a></li>
+                <li class="nav-item active"><a href="/configure" class="nav-link">Configure</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container" style="padding-top: 80px;">
+    <h4>Add Blockchain nodes</h4>
+    <p>Enter a list of Blockchain node URLs separated by comma and click on "Add Node".</p>
+
+    <form id="node_form" class="form-inline mb-4">
+        <label for="nodes" class="mr-2">Node URLs:</label>
+        <input type="text" name="nodes" id="nodes" placeholder="127.0.0.1:5001,127.0.0.1:5002" class="form-control mr-2 w-75">
+        <input type="button" id="add_node_button" class="btn btn-primary" value="Add Node">
+    </form>
+
+    <h4>Connected Nodes</h4>
+    <ul id="list_nodes"></ul>
+</div>
+
+<script src="/static/vendor/jquery/jquery.min.js"></script>
+<script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/static/vendor/DataTables/js/datatables.min.js"></script>
+<script src="/static/vendor/DataTables/js/ellipsis.js"></script>
+
+<script>
+$(function() {
+    $('#add_node_button').click(function() {
+        let nodes = $('#nodes').val();
+        if(!nodes){
+            alert('Please enter valid node URLs.');
+            return;
+        }
+        $.ajax({
+            url: '/nodes/register',
+            method: 'POST',
+            data: { nodes: nodes },
+            success: function(response) {
+                alert(response.message);
+                $('#nodes').val('');
+                loadNodes();
+            },
+            error: function() {
+                alert('Error adding nodes.');
+            }
+        });
+    });
+
+    function loadNodes() {
+        $.ajax({
+            url: '/nodes/get',
+            method: 'GET',
+            success: function(response) {
+                let nodesList = $('#list_nodes');
+                nodesList.empty();
+                response.nodes.forEach(function(node) {
+                    nodesList.append('<li><a href="http://' + node + '" target="_blank">' + node + '</a></li>');
+                });
+            },
+            error: function() {
+                alert('Error loading nodes.');
+            }
+        });
+    }
+
+    loadNodes();
+});
+</script>
+
+</body>
+</html>
