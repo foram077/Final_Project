@@ -50,6 +50,7 @@ class Blockchain:
 
     def verify_transaction_signature(self, librarian_public_key, signature, transaction):
         try:
+            
             public_key = RSA.importKey(binascii.unhexlify(librarian_public_key))
             verifier = PKCS1_v1_5.new(public_key)
                 # Canonical JSON: keys sorted, compact separators
