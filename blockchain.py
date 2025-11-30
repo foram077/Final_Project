@@ -50,21 +50,13 @@ class Blockchain:
 
     def verify_transaction_signature(self, librarian_public_key, signature, transaction):
         try:
-            
             public_key = RSA.importKey(binascii.unhexlify(librarian_public_key))
             verifier = PKCS1_v1_5.new(public_key)
-                # Canonical JSON: keys sorted, compact separators
-            msg = json.dumps(transaction, sort_keys=True, separators=(',', ':')).encode('utf8')
-            h = SHA.new(msg)
-
-
-
-
+            h = SHA.new(str(transaction).encode('utf8'))
             verifier.verify(h, binascii.unhexlify(signature))
             return True
         except (ValueError, TypeError, binascii.Error):
             return False
-
 
     @staticmethod
     def valid_proof(transactions, last_hash, nonce, difficulty=MINING_DIFFICULTY):
