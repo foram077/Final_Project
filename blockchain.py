@@ -56,6 +56,9 @@ class Blockchain:
             msg = json.dumps(transaction, sort_keys=True, separators=(',', ':')).encode('utf8')
             h = SHA.new(msg)
 
+
+
+
             verifier.verify(h, binascii.unhexlify(signature))
             return True
         except (ValueError, TypeError, binascii.Error):
