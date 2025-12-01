@@ -5,7 +5,7 @@
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Library Ledger - Blockchain Frontend</title>
+    <title>Library Ledger - Blockchain </title>
 
     <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/vendor/DataTables/css/datatables.min.css">
@@ -32,13 +32,13 @@
 </nav>
 
 <div class="container">
-    <h4>Record Book Event (Borrow / Return)</h4>
-    <p>Fill the fields below and click <strong>Record Event</strong>. Librarian must sign the transaction (hex signature).</p>
+    <h4>Book Event Record (Borrow / Return)</h4>
+    <p>Fill the fields below and click <strong>Record Event</strong>. Librarian must sign the transaction.</p>
 
     <form id="transaction_form" class="form-inline">
         <div class="row">
             <div class="col-sm-6">
-                <input type="text" name="librarian_public_key" id="librarian_public_key" placeholder="Librarian Public Key (hex)" class="form-control w-100 mb-3">
+                <input type="text" name="librarian_public_key" id="librarian_public_key" placeholder="Librarian Public Key" class="form-control w-100 mb-3">
                 <input type="text" name="student_id" id="student_id" placeholder="Student ID" class="form-control w-100 mb-3">
             </div>
             <div class="col-sm-6">
@@ -47,7 +47,7 @@
                     <option value="borrow">Borrow</option>
                     <option value="return">Return</option>
                 </select>
-                <input type="text" name="transaction_signature" id="transaction_signature" placeholder="Transaction Signature (hex)" class="form-control w-100 mb-3">
+                <input type="text" name="transaction_signature" id="transaction_signature" placeholder="Transaction Signature" class="form-control w-100 mb-3">
             </div>
         </div>
 
@@ -60,19 +60,19 @@
 <hr>
 
 <div class="container text-center mb-3">
-    <h4>Pending Events (will be mined)</h4>
+    <h4>Pending Events</h4>
     <button type="button" id="refresh_transactions" class="btn btn-primary"><i class="fa fa-refresh"></i></button>
 </div>
 
 <div class="container">
     <table id="unmined_transactions_table" class="table table-bordered"></table>
     <div class="text-center mt-3 mb-5">
-        <input type="button" id="mine_button" class="btn btn-success btn-lg" value="Mine (Confirm Events)">
+        <input type="button" id="mine_button" class="btn btn-success purple-btn btn-lg" value="Mine">
     </div>
 </div>
 
 <div class="container text-center mb-3">
-    <h4>Ledger (All confirmed events)</h4>
+    <h4>Ledger Events</h4>
     <button type="button" id="refresh_blockchain" class="btn btn-primary"><i class="fa fa-refresh"></i></button>
 </div>
 
